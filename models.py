@@ -19,6 +19,8 @@ from typing import Literal
 import json 
 
 
+Lang = Literal['en', 'ar']
+
 class ChatTurn(BaseModel):
     """
     One earlier message of the conversation, sent back by the widget.
