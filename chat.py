@@ -23,6 +23,7 @@ from llm import ChatModel, AzureChatModel
 from dataclasses import dataclass, field
 from collections.abc import AsyncIterator
 from models import ChatRequest, Lang
+from sse import sse_event
 
 logger = logging.getLogger("eaa_chat.chat")
 
@@ -65,7 +66,7 @@ class ChatService:
 
 
 
-
+    # consumes chat_stream and return tokens to the caller
     #async def stream(self, request: ChatRequest, request_id: str, lang: Lang) -> AsyncIterator[str]:
     async def stream(self, request: ChatRequest) -> AsyncIterator[str]:
         """
@@ -81,8 +82,10 @@ class ChatService:
         # Extract a question
         question = request.question.strip()
 
+        parts: list[str] = []
         async for pieces in self.llm.chat_stream(user_prompt = question):
-            yield pieces
+            parts.append(pieces)
+            yield sse_event("delta", {"text":pieces})
 
 
 async def main():
@@ -91,9 +94,13 @@ async def main():
     chat = ChatService(llm=llm) #ChatModel is a protocol, then self.llm just points to the abstract protocol
     
     req = ChatRequest(question="hello, tell me about python?")
+
+
     
     async for event in chat.stream(request=req):
         print(event)
+
+
 
 if __name__ == "__main__":
     asyncio.run(main())
