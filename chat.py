@@ -25,6 +25,7 @@ from collections.abc import AsyncIterator
 from models import ChatRequest, Lang
 from sse import sse_event
 
+
 logger = logging.getLogger("eaa_chat.chat")
 
 
@@ -77,7 +78,7 @@ class ChatService:
         """
 
         # started = time.perf_counter()
-        #trace = ChatTrace(request_id=request_id, lang=lang)
+        # trace = ChatTrace(request_id=request_id, lang=lang)
 
         # Extract a question
         question = request.question.strip()

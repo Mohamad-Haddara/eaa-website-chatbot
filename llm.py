@@ -28,6 +28,10 @@ class ChatModel(Protocol):
         Return one short completion as plain text (used to rewrite follow-up questions)
         """
 
+    # async def close(self):
+    #     """
+    #     Close network connections.
+    #     """
   
 
 # Our implementation
@@ -38,7 +42,7 @@ class AzureChatModel:
     """
     ChatModel in Microsoft Foundry
     """
-
+    # Creates self._client = AsyncAzureOpenAI(...)
     # set: api_key, api_version, azure_endpoint, azure_deployment (using os.environ)
     def __init__(self):
         self._aclient = AsyncOpenAI(
@@ -101,6 +105,13 @@ class AzureChatModel:
 
         return response.choices[0].message.content
 
+
+    async def close(self) -> None:
+        """
+        Close the HTTP connection pool.
+        """
+
+        await self._aclient.close()
 
 if __name__ == "__main__":
     client = AzureChatModel()

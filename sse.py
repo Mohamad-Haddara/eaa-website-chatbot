@@ -1,5 +1,5 @@
 """
-Server-Sent Events (SSE): the streaming format between the chatapi and the widget.
+Server-Sent Events (SSE): the streaming format between the chat API and the widget.
 
 Each event is two lines and a blank line:
 

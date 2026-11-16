@@ -6,12 +6,37 @@ from fastapi import FastAPI, status
 from models import ChatRequest
 import uvicorn
 import asyncio
+from contextlib import asynccontextmanager
+from typing import AsyncIterator
+from llm import ChatModel, AzureChatModel
+from chat import ChatService
+
+
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI) -> AsyncIterator[None]: # async generator: code before yield = startup, after = shutdown
+    """
+    Create the service clients once at start-up and close them at shutdown.
+    """
+    
+    chat_model = AzureChatModel() # createad once, shared by all requests
+
+    app.state.chat = ChatService(llm=chat_model)    # ChatService what our endpoint reads
+
+    try:
+        yield       # the app serves requests while paused here
+
+    finally:
+        await chat_model.close()    # shutdown: closes the client
+
 
 app = FastAPI(
     title="EAA website chatbot API",
+    lifespan=lifespan,
+    docs_url="/docs"
 
 )
-
 
 @app.get("/health")
 async def health() -> dict[str, str]:
