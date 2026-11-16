@@ -10,6 +10,7 @@ from contextlib import asynccontextmanager
 from typing import AsyncIterator
 from llm import ChatModel, AzureChatModel
 from chat import ChatService
+from prompts import detect_language
 
 
 
@@ -60,6 +61,7 @@ async def chat(body:ChatRequest):
         - JSON error ~ 400, 403, 413, 429 or 503 (busy) before streaming start; error events start
     """
     # Detect language
+    lang = detect_language(body.question)
 
     # allow the origin list
 
