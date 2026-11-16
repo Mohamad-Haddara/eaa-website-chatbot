@@ -61,12 +61,13 @@ class ChatService:
     """
 
     def __init__(self, llm: ChatModel):
-        self.llm = llm
+        self.llm = llm # points to the abstract protocol
 
 
 
 
-    async def stream(self, request: ChatRequest, request_id: str, lang: Lang) -> AsyncIterator[str]:
+    #async def stream(self, request: ChatRequest, request_id: str, lang: Lang) -> AsyncIterator[str]:
+    async def stream(self, request: ChatRequest) -> AsyncIterator[str]:
         """
         Yield the SSE events for one question (see app/sse.py for the event list)
 
@@ -74,25 +75,24 @@ class ChatService:
         
         """
 
-        #started = time.perf_counter()
-        trace = ChatTrace(request_id=request_id, lang=lang)
+        # started = time.perf_counter()
+        #trace = ChatTrace(request_id=request_id, lang=lang)
 
         # Extract a question
         question = request.question.strip()
 
-        response = await self.llm.complete(user_prompt=question)
-
-        yield response
+        async for pieces in self.llm.chat_stream(user_prompt = question):
+            yield pieces
 
 
 async def main():
 
     llm = AzureChatModel()
-    chat = ChatService(llm=llm) #ChatModel is a protocl, then self.llm just points to the abstract protocol
+    chat = ChatService(llm=llm) #ChatModel is a protocol, then self.llm just points to the abstract protocol
     
     req = ChatRequest(question="hello, tell me about python?")
     
-    async for event in chat.stream(request=req, request_id="11111", lang="en"):
+    async for event in chat.stream(request=req):
         print(event)
 
 if __name__ == "__main__":
