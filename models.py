@@ -17,6 +17,7 @@ Data Models:
 from pydantic import BaseModel, Field, ValidationError
 from typing import Literal
 import json 
+from dataclasses import dataclass, field
 
 
 Lang = Literal['en', 'ar']
@@ -40,6 +41,17 @@ class ChatRequest(BaseModel):
     history: list[ChatTurn] = Field(default_factory=list, max_length=20)
 
 
+
+
+@dataclass
+class TokenUsage:
+    """
+    Token counts for one answer. The chat model fills this when the stream ends.
+    """
+    prompt_tokens: int = 0
+    completion_tokens: int = 0  # includes reasoning tokens on reasoning model
+    reasoning_tokens: int = 0
+    finish_reason: str | None = None # "stop", "length" or "content filter"
 
 
 # -------------------- Testing & Validation --------------------

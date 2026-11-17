@@ -9,6 +9,12 @@ The question-answering chain: (rewrite) -> search -> group -> answer, streamed a
 
 `ChatService.stream()` is a whole bot. It is an async generator of SSE strings, so the route in main.py only has to pass it to a StreamResponse.
 
+Job: Answer the question
+
+Input/Output: question -> SSE events
+
+Knows about: prompt, RAG search, language, SSE format
+
 """
 
 
@@ -22,7 +28,7 @@ from dotenv import load_dotenv
 from llm import ChatModel, AzureChatModel
 from dataclasses import dataclass, field
 from collections.abc import AsyncIterator
-from models import ChatRequest, Lang
+from models import ChatRequest, Lang, TokenUsage
 from sse import sse_event
 
 
@@ -56,20 +62,20 @@ class ChatTrace:
     question: str | None = field(default=None, repr=False) # Only when LOG_QUESTIONS = true
 
 
-
+# Uses LLM, knows nothing about Azure
 class ChatService:
     """
     Answers one question at a time; shared by all requests (it holds no per-request state).
     """
 
     def __init__(self, llm: ChatModel):
-        self.llm = llm # points to the abstract protocol
+        self.llm = llm # points to the abstract protocol. Note: I can swap it easily
 
 
 
     # consumes chat_stream and return tokens to the caller
     #async def stream(self, request: ChatRequest, request_id: str, lang: Lang) -> AsyncIterator[str]:
-    async def stream(self, request: ChatRequest, request_id: str, lang: Lang) -> AsyncIterator[str]:
+    async def stream(self, request: ChatRequest, lang: Lang) -> AsyncIterator[str]:
         """
         Yield the SSE events for one question (see app/sse.py for the event list)
 
@@ -83,8 +89,9 @@ class ChatService:
         # Extract a question
         question = request.question.strip()
 
+        usage = TokenUsage()
         parts: list[str] = []
-        async for pieces in self.llm.chat_stream(user_prompt = question):
+        async for pieces in self.llm.chat_stream(question, usage):
             parts.append(pieces)
             yield sse_event("delta", {"text":pieces})
 

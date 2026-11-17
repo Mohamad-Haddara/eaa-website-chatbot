@@ -1,6 +1,7 @@
 """
 Build the FastAPI app: routes, CORS, security headers, start-up and shut-down of the Azure Client
 
+    - Handle HTTP
 """
 from fastapi import FastAPI, status, Request
 from models import ChatRequest
@@ -34,7 +35,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]: # async generator: code
     
     chat_model = AzureChatModel() # createad once, shared by all requests
 
-    app.state.chat = ChatService(llm=chat_model)    # ChatService what our endpoint reads
+    app.state.chat = ChatService(llm=chat_model)    # ChatService what our endpoint reads. ChatService that uses this LLM
 
     try:
         yield       # the app serves requests while paused here
@@ -113,40 +114,50 @@ async def chat(body:ChatRequest, request: Request):
 
     Intial: Validate question -> detect language -> stream
     """
-    # Detect language
-    lang = detect_language(body.question)
 
-    # allow the origin list
+    # Set Request ID (Middleware)
+    request_id = request.state.request_id
+    logger.info(f"Request ID: {request_id}")
 
-    # get the origin and raise an error for any failure
-    origin = (request.headers.get("origin") or "").rstrip("/")
+    
+
+    # Get the origin (tell us which website sent the request)
+    origin: str = (request.headers.get("origin") or "").rstrip("/")
     logger.info(f"Origin: {origin}")
     
 
-    # Extract question
+    # Extract question - question without leading/trailing spaces
     question = body.question.strip()  
-    logger.info(f"USer Question: {question}")
+    logger.info(f"User Question: {question}")
     # If empty question ~ return error 400
 
     # if question is longer than limit ~ return error 400
 
-    # Peer 
-    peer = request.client.host if request.client else None
+
+    # Detect language after question validation
+    lang: str = detect_language(question)
+
+
+    # Peer - This is proxy IP
+    peer: str | None = request.client.host if request.client else None
     logger.info(f"Peer: {peer}")
 
     
-    # Read the request_id that is created in the middleware
-    request_id = request.state.request_id
-    logger.info(f"Request-ID: {request_id}")
 
-    # Create a chat service to return response as SSE
-    service: ChatService = request.app.state.chat
+    # ChatService: one instance, created in lifespan ~ it only gets shared instance made at startup
+    service: ChatService = app.state.chat
+
 
     # Pass the chat stream generator to the StreamResponse to forward the output stream as it is being generated to the client
     # Set the media_type: "text/event-stream" as per SSE specifications so that the browsers can handle the response correctly 
     return StreamingResponse(
-        content=service.stream(body, request_id, lang),
+        content=service.stream(body, request_id, lang), # AsyncIterator[str]
         media_type="text/event-stream; charset=utf-8",
+        headers={
+            # MISTAKE (missing): without these, proxies or caches can hold back the events
+            "Cache-Control": "no-cache",
+            "X-Accel-Buffering": "no",
+        },
     )
 
 if __name__ == "__main__":
