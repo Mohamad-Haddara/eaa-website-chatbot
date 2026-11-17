@@ -69,7 +69,7 @@ class ChatService:
 
     # consumes chat_stream and return tokens to the caller
     #async def stream(self, request: ChatRequest, request_id: str, lang: Lang) -> AsyncIterator[str]:
-    async def stream(self, request: ChatRequest) -> AsyncIterator[str]:
+    async def stream(self, request: ChatRequest, request_id: str, lang: Lang) -> AsyncIterator[str]:
         """
         Yield the SSE events for one question (see app/sse.py for the event list)
 
