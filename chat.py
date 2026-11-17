@@ -23,6 +23,8 @@ from llm import ChatModel, AzureChatModel
 from dataclasses import dataclass, field
 from collections.abc import AsyncIterator
 from models import ChatRequest, Lang
+from sse import sse_event
+
 
 logger = logging.getLogger("eaa_chat.chat")
 
@@ -61,11 +63,12 @@ class ChatService:
     """
 
     def __init__(self, llm: ChatModel):
-        self.llm = llm
+        self.llm = llm # points to the abstract protocol
 
 
 
-
+    # consumes chat_stream and return tokens to the caller
+    #async def stream(self, request: ChatRequest, request_id: str, lang: Lang) -> AsyncIterator[str]:
     async def stream(self, request: ChatRequest, request_id: str, lang: Lang) -> AsyncIterator[str]:
         """
         Yield the SSE events for one question (see app/sse.py for the event list)
@@ -74,26 +77,31 @@ class ChatService:
         
         """
 
-        #started = time.perf_counter()
-        trace = ChatTrace(request_id=request_id, lang=lang)
+        # started = time.perf_counter()
+        # trace = ChatTrace(request_id=request_id, lang=lang)
 
         # Extract a question
         question = request.question.strip()
 
-        response = await self.llm.complete(user_prompt=question)
-
-        yield response
+        parts: list[str] = []
+        async for pieces in self.llm.chat_stream(user_prompt = question):
+            parts.append(pieces)
+            yield sse_event("delta", {"text":pieces})
 
 
 async def main():
 
     llm = AzureChatModel()
-    chat = ChatService(llm=llm) #ChatModel is a protocl, then self.llm just points to the abstract protocol
+    chat = ChatService(llm=llm) #ChatModel is a protocol, then self.llm just points to the abstract protocol
     
     req = ChatRequest(question="hello, tell me about python?")
+
+
     
-    async for event in chat.stream(request=req, request_id="11111", lang="en"):
+    async for event in chat.stream(request=req):
         print(event)
+
+
 
 if __name__ == "__main__":
     asyncio.run(main())
