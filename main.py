@@ -72,7 +72,6 @@ async def time_request(request: Request, call_next: Callable):
     return response
 
 
-
 @app.middleware("http")
 async def add_request_id(request: Request, call_next: Callable) -> StreamingResponse:
     # correlation id a unique identifier attached to an HTTP incoming request

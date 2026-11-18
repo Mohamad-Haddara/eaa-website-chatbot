@@ -22,14 +22,24 @@ import json
 from collections.abc import Mapping
 from typing import Any
 
+
+# Format sse
 def sse_event(event: str, data: Mapping[str, Any]) -> str:
     """
     Return one SSE event as text, ready to write to the response.
 
     Example: sse_event("delta", {"text":"Hi"})  -> 'event: delta\\ndata: {"text": "Hi"}\n\n'
     json.dumps escapes newlines, so 'data' fits on one line.
+
+    
+    Wire format per the SSE spec: ''event: <channel>\\ndata: <json>\\n\n''
+    The JSON payload carries ''content'' and ''metadata'' only -- the ''channel'' is hoisted onto the ''event:'' line
+    so EventSource clients can dispatch by channel without parsing the body.
+
     """
 
-    return f"event: {event}\ndata: {json.dumps(data, ensure_ascii=False)}\n\n"
+    payload = json.dumps(data, ensure_ascii=False)
+    
+    return f"event: {event}\ndata: {payload}\n\n".encode("utf-8")
 
 

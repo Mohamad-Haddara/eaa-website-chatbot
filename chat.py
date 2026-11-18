@@ -75,7 +75,7 @@ class ChatService:
 
     # consumes chat_stream and return tokens to the caller
     #async def stream(self, request: ChatRequest, request_id: str, lang: Lang) -> AsyncIterator[str]:
-    async def stream(self, request: ChatRequest, lang: Lang) -> AsyncIterator[str]:
+    async def stream(self, request: ChatRequest, lang: Lang, request_id: str) -> AsyncIterator[str]:
         """
         Yield the SSE events for one question (see app/sse.py for the event list)
 
@@ -91,9 +91,12 @@ class ChatService:
 
         usage = TokenUsage()
         parts: list[str] = []
-        async for pieces in self.llm.chat_stream(question, usage):
+        async for pieces in self.llm.chat_stream(question, usage):  #str pieces
             parts.append(pieces)
-            yield sse_event("delta", {"text":pieces})
+            yield sse_event("delta", {"text":pieces})               # str; the endpoint sends it as an SSE event
+
+
+       
 
 
 async def main():
